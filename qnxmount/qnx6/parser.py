@@ -214,7 +214,7 @@ class Parser(KaitaiStruct):
 
             io = self._root._io
             _pos = io.pos()
-            io.seek((self.sblk0 * 512))
+            io.seek((self.sblk0 * self._root.superblock_sector_size))
             self._m_superblock0 = Parser.Superblock(io, self, self._root)
             io.seek(_pos)
             return getattr(self, '_m_superblock0', None)
@@ -226,7 +226,7 @@ class Parser(KaitaiStruct):
 
             io = self._root._io
             _pos = io.pos()
-            io.seek((self.sblk1 * 512))
+            io.seek((self.sblk1 * self._root.superblock_sector_size))
             self._m_superblock1 = Parser.Superblock(io, self, self._root)
             io.seek(_pos)
             return getattr(self, '_m_superblock1', None)
@@ -238,7 +238,7 @@ class Parser(KaitaiStruct):
 
             io = self._root._io
             _pos = io.pos()
-            io.seek((self.sblk0 * 512))
+            io.seek((self.sblk0 * self._root.superblock_sector_size))
             self._m_superblock0_raw = io.read_bytes(512)
             io.seek(_pos)
             return getattr(self, '_m_superblock0_raw', None)
@@ -250,10 +250,58 @@ class Parser(KaitaiStruct):
 
             io = self._root._io
             _pos = io.pos()
-            io.seek((self.sblk1 * 512))
+            io.seek((self.sblk1 * self._root.superblock_sector_size))
             self._m_superblock1_raw = io.read_bytes(512)
             io.seek(_pos)
             return getattr(self, '_m_superblock1_raw', None)
+
+        @property
+        def superblock0_magic_512(self):
+            if hasattr(self, '_m_superblock0_magic_512'):
+                return self._m_superblock0_magic_512
+
+            io = self._root._io
+            _pos = io.pos()
+            io.seek((self.sblk0 * 512))
+            self._m_superblock0_magic_512 = io.read_u4le()
+            io.seek(_pos)
+            return getattr(self, '_m_superblock0_magic_512', None)
+
+        @property
+        def superblock1_magic_512(self):
+            if hasattr(self, '_m_superblock1_magic_512'):
+                return self._m_superblock1_magic_512
+
+            io = self._root._io
+            _pos = io.pos()
+            io.seek((self.sblk1 * 512))
+            self._m_superblock1_magic_512 = io.read_u4le()
+            io.seek(_pos)
+            return getattr(self, '_m_superblock1_magic_512', None)
+
+        @property
+        def superblock0_magic_4096(self):
+            if hasattr(self, '_m_superblock0_magic_4096'):
+                return self._m_superblock0_magic_4096
+
+            io = self._root._io
+            _pos = io.pos()
+            io.seek((self.sblk0 * 4096))
+            self._m_superblock0_magic_4096 = io.read_u4le()
+            io.seek(_pos)
+            return getattr(self, '_m_superblock0_magic_4096', None)
+
+        @property
+        def superblock1_magic_4096(self):
+            if hasattr(self, '_m_superblock1_magic_4096'):
+                return self._m_superblock1_magic_4096
+
+            io = self._root._io
+            _pos = io.pos()
+            io.seek((self.sblk1 * 4096))
+            self._m_superblock1_magic_4096 = io.read_u4le()
+            io.seek(_pos)
+            return getattr(self, '_m_superblock1_magic_4096', None)
 
 
     class Longname(KaitaiStruct):
@@ -301,6 +349,31 @@ class Parser(KaitaiStruct):
         return getattr(self, '_m_blocksize', None)
 
     @property
+    def superblock_sector_size(self):
+        """Unit for bootblock sblk0/sblk1 pointers. Some images use 512-byte units and others use 4096-byte units."""
+        if hasattr(self, '_m_superblock_sector_size'):
+            return self._m_superblock_sector_size
+
+        self._m_superblock_sector_size = (512 if self.superblock_magic_512_valid else (4096 if self.superblock_magic_4096_valid else 0))
+        return getattr(self, '_m_superblock_sector_size', None)
+
+    @property
+    def superblock_magic_512_valid(self):
+        if hasattr(self, '_m_superblock_magic_512_valid'):
+            return self._m_superblock_magic_512_valid
+
+        self._m_superblock_magic_512_valid = self.qnx6_bootblock.superblock0_magic_512 == 1746473250 and self.qnx6_bootblock.superblock1_magic_512 == 1746473250
+        return getattr(self, '_m_superblock_magic_512_valid', None)
+
+    @property
+    def superblock_magic_4096_valid(self):
+        if hasattr(self, '_m_superblock_magic_4096_valid'):
+            return self._m_superblock_magic_4096_valid
+
+        self._m_superblock_magic_4096_valid = self.qnx6_bootblock.superblock0_magic_4096 == 1746473250 and self.qnx6_bootblock.superblock1_magic_4096 == 1746473250
+        return getattr(self, '_m_superblock_magic_4096_valid', None)
+
+    @property
     def abs_data_start_padding(self):
         """Kaitai does not support abs()."""
         if hasattr(self, '_m_abs_data_start_padding'):
@@ -317,5 +390,3 @@ class Parser(KaitaiStruct):
 
         self._m_data_start = (12288 + (0 if self.blocksize <= 4096 else self.abs_data_start_padding))
         return getattr(self, '_m_data_start', None)
-
-

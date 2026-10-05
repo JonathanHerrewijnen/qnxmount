@@ -23,20 +23,36 @@ types:
     instances:
       superblock0:
         io: _root._io
-        pos: sblk0*512
+        pos: sblk0 * _root.superblock_sector_size
         type: superblock
       superblock1:
         io: _root._io
-        pos: sblk1*512
+        pos: sblk1 * _root.superblock_sector_size
         type: superblock
       superblock0_raw:
         io: _root._io
-        pos: sblk0*512
+        pos: sblk0 * _root.superblock_sector_size
         size: 512
       superblock1_raw:
         io: _root._io
-        pos: sblk1*512
+        pos: sblk1 * _root.superblock_sector_size
         size: 512
+      superblock0_magic_512:
+        io: _root._io
+        pos: sblk0 * 512
+        type: u4
+      superblock1_magic_512:
+        io: _root._io
+        pos: sblk1 * 512
+        type: u4
+      superblock0_magic_4096:
+        io: _root._io
+        pos: sblk0 * 4096
+        type: u4
+      superblock1_magic_4096:
+        io: _root._io
+        pos: sblk1 * 4096
+        type: u4
 
   superblock:
     seq:
@@ -209,12 +225,16 @@ instances:
     value: sizeof<inode>
   blocksize:
     value: qnx6_bootblock.superblock0.blocksize
+  superblock_magic_512_valid:
+    value: qnx6_bootblock.superblock0_magic_512 == 0x68191122 and qnx6_bootblock.superblock1_magic_512 == 0x68191122
+  superblock_magic_4096_valid:
+    value: qnx6_bootblock.superblock0_magic_4096 == 0x68191122 and qnx6_bootblock.superblock1_magic_4096 == 0x68191122
+  superblock_sector_size:
+    value: 'superblock_magic_512_valid ? 512 : (superblock_magic_4096_valid ? 4096 : 0)'
+    doc: 'Unit for bootblock sblk0/sblk1 pointers. Some images use 512-byte units and others use 4096-byte units.'
   abs_data_start_padding:
     value: '(blocksize > 0x3000) ? blocksize - 0x3000 : 0x3000 - blocksize'
     doc: Kaitai does not support abs()
   data_start:
     value: '0x3000 + ((blocksize <= 0x1000) ? 0 : abs_data_start_padding)'
     doc: 'https://github.com/RunZeJustin/qnx660/blob/47c4158e3993d7536170b649e6c1e09552318fb4/target/qnx6/usr/include/sys/fs_qnx6.h'
-
-
-
